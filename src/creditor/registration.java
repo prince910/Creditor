@@ -9,9 +9,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
@@ -20,13 +24,14 @@ import javax.swing.JOptionPane;
 public class registration extends javax.swing.JFrame {
 
     Connection con;
-    PreparedStatement insert;
+    PreparedStatement query;
 
     /**
      * Creates new form registration
      */
     public registration() {
         initComponents();
+        updateTable();
     }
 
     /**
@@ -54,7 +59,7 @@ public class registration extends javax.swing.JFrame {
         editUserButton = new javax.swing.JButton();
         deleteUserButton = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        userTable = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -180,23 +185,23 @@ public class registration extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
+        userTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
             new String [] {
-                "ID", "First Name", "Middle Name", "Last Name", "Phone Number", "Email"
+                "ID", "First Name", "Middle Name", "Last Name", "Phone Number", "Email", "Created"
             }
         ) {
             Class[] types = new Class [] {
-                java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class
+                java.lang.Integer.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
             };
 
             public Class getColumnClass(int columnIndex) {
                 return types [columnIndex];
             }
         });
-        jScrollPane1.setViewportView(jTable1);
+        jScrollPane1.setViewportView(userTable);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -261,28 +266,28 @@ public class registration extends javax.swing.JFrame {
 
             con = DriverManager.getConnection("jdbc:mysql://localhost:3306/creditor", "root", "");
 
-            insert = con.prepareStatement("INSERT INTO `users`(`firstName`, `middleName`, `lastName`, `mobileNumber`, `email`) "
+            query = con.prepareStatement("INSERT INTO `user`(`firstName`, `middleName`, `lastName`, `mobileNumber`, `email`) "
                     + "                                VALUES (?,?,?,?,?)");
-            insert.setString(1, user.getFirstName());
-            insert.setString(2, user.getMiddleName());
-            insert.setString(3, user.getLastName());
-            insert.setString(4, user.getMobileNumber());
-            insert.setString(5, user.getEmail());
+            query.setString(1, user.getFirstName());
+            query.setString(2, user.getMiddleName());
+            query.setString(3, user.getLastName());
+            query.setString(4, user.getMobileNumber());
+            query.setString(5, user.getEmail());
 
-            insert.execute();
+            query.execute();
 
             JOptionPane.showMessageDialog(this, "Record for " + user.getFirstName() + " is added");
 
-            insert.close();
-            con.close();
-
+            closeCon();
             clearFields();
+            updateTable();
 
         } catch (ClassNotFoundException | SQLException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
             Logger.getLogger(registration.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_addUserButtonActionPerformed
+
     private void clearFields() {
 
         firstNameTextField.setText("");
@@ -294,7 +299,60 @@ public class registration extends javax.swing.JFrame {
         firstNameTextField.requestFocus();
 
     }
-    
+
+    private void updateTable() {
+        int columnCount;
+        
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/creditor", "root", "");
+
+            query = con.prepareStatement("SELECT * FROM `user`");
+
+            ResultSet resultSet = query.executeQuery();
+
+            ResultSetMetaData metaDataCount = resultSet.getMetaData();
+
+            columnCount = metaDataCount.getColumnCount();
+            
+            DefaultTableModel defaultUserTable = (DefaultTableModel)userTable.getModel();
+            
+            defaultUserTable.setRowCount(0);
+            while(resultSet.next()){
+                Vector userRow = new Vector();
+                
+                for (int i = 1; i < columnCount; i++) {
+                    userRow.add(resultSet.getInt(1));
+                    userRow.add(resultSet.getString(2));
+                    userRow.add(resultSet.getString(3));
+                    userRow.add(resultSet.getString(4));
+                    userRow.add(resultSet.getString(5));
+                    userRow.add(resultSet.getString(6));
+                    userRow.add(resultSet.getString(7));
+                    
+                }
+                
+                defaultUserTable.addRow(userRow);
+            }
+
+            closeCon();
+
+        } catch (ClassNotFoundException | SQLException ex) {
+            Logger.getLogger(registration.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    private void closeCon() {
+        try {
+            con.close();
+            query.close();
+        } catch (SQLException ex) {
+            Logger.getLogger(registration.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
     private void editUserButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editUserButtonActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_editUserButtonActionPerformed
@@ -343,7 +401,6 @@ public class registration extends javax.swing.JFrame {
     private javax.swing.JLabel firstNameLabel;
     private javax.swing.JTextField firstNameTextField;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
     private javax.swing.JLabel lastNameLabel;
     private javax.swing.JLabel lastNameLabel1;
     private javax.swing.JLabel lastNameLabel2;
@@ -351,6 +408,7 @@ public class registration extends javax.swing.JFrame {
     private javax.swing.JLabel middleNameLabel;
     private javax.swing.JTextField middleNameTextField;
     private javax.swing.JTextField mobileNumberTextField;
+    private javax.swing.JTable userTable;
     private javax.swing.JLabel windowLabel;
     // End of variables declaration//GEN-END:variables
 }
